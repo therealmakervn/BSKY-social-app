@@ -74,7 +74,10 @@ ENTRYPOINT ["dumb-init", "--"]
 WORKDIR /bskyweb
 COPY --from=build-env /bskyweb /usr/bin/bskyweb
 
-CMD ["/usr/bin/bskyweb"]
+# Thêm biến môi trường PORT
+ENV PORT=3000
+
+CMD ["/usr/bin/bskyweb", "serve", "--host", "0.0.0.0", "--port", "$PORT"]
 
 LABEL org.opencontainers.image.source=https://github.com/bluesky-social/social-app
 LABEL org.opencontainers.image.description="bsky.app Web App"

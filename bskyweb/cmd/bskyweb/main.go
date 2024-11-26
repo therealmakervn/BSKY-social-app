@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
 	"os"
 
 	_ "github.com/joho/godotenv/autoload"
@@ -17,7 +19,15 @@ func init() {
 }
 
 func main() {
-	run(os.Args)
+	// Sử dụng PORT từ env hoặc default 3000
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000"
+	}
+
+	// Lắng nghe trên 0.0.0.0 và PORT
+	addr := fmt.Sprintf("0.0.0.0:%s", port)
+	log.Fatal(http.ListenAndServe(addr, handler))
 }
 
 func run(args []string) {
