@@ -8,7 +8,11 @@ ENV GOEXPERIMENT="loopvar"
 # Copy bskyweb directory first
 COPY bskyweb/ ./bskyweb/
 
-# Initialize Go modules
+# Create static directories and files
+COPY . .
+RUN yarn && yarn build-web
+
+# Download and verify dependencies
 RUN cd bskyweb/ && \
     go mod download && \
     go mod verify
