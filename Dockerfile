@@ -8,10 +8,10 @@ ENV GOEXPERIMENT="loopvar"
 # Copy bskyweb directory first
 COPY bskyweb/ ./bskyweb/
 
-# Initialize Go modules
+# Download and verify dependencies (không init vì đã có go.mod)
 RUN cd bskyweb/ && \
-    go mod init bskyweb && \
-    go mod tidy
+    go mod download && \
+    go mod verify
 
 # Build the binary
 RUN cd bskyweb/ && \
@@ -23,10 +23,8 @@ RUN cd bskyweb/ && \
 # Second stage
 FROM debian:bullseye-slim
 
-ENV GODEBUG=netdns=go
-ENV TZ=Etc/UTC
-ENV DEBIAN_FRONTEND=noninteractive
 ENV PORT=3000
+ENV GODEBUG=netdns=go
 
 RUN apt-get update && apt-get install --yes \
     dumb-init \
