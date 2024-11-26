@@ -36,8 +36,13 @@ func run(args []string) error {
 			Action: serveMain,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
+					Name:  "host",
+					Usage: "Host to listen on",
+					Value: "0.0.0.0",
+				},
+				&cli.StringFlag{
 					Name:  "appview-host",
-					Usage: "scheme, hostname, and port of PDS instance", 
+					Usage: "scheme, hostname, and port of PDS instance",
 					Value: "http://localhost:2584",
 					EnvVars: []string{"ATP_APPVIEW_HOST", "ATP_PDS_HOST"},
 				},
@@ -49,12 +54,13 @@ func run(args []string) error {
 }
 
 func serveMain(c *cli.Context) error {
+	host := c.String("host")
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3000"
 	}
 
-	addr := fmt.Sprintf("0.0.0.0:%s", port)
+	addr := fmt.Sprintf("%s:%s", host, port)
 	log.Infof("Starting server on %s", addr)
 	
 	return http.ListenAndServe(addr, http.FileServer(http.Dir("static")))

@@ -52,4 +52,4 @@ WORKDIR /bskyweb
 COPY --from=build-env /bskyweb /usr/bin/bskyweb
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["/usr/bin/bskyweb", "serve", "--host", "0.0.0.0", "--port", "$PORT"]
+CMD ["/usr/bin/bskyweb", "serve"]
