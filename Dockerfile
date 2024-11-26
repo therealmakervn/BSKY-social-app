@@ -43,6 +43,8 @@ RUN apt-get update && apt-get install --yes \
 WORKDIR /usr/bin
 COPY --from=build-env /bskyweb ./bskyweb
 COPY --from=build-env /usr/src/social-app/bskyweb/static ./static
+COPY bskyweb/migrations /usr/bin/migrations
 
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["./bskyweb", "serve"]
+RUN ./bskyweb migrate

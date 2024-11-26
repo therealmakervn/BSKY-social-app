@@ -48,6 +48,11 @@ func run(args []string) error {
 				},
 			},
 		},
+		&cli.Command{
+			Name:   "migrate",
+			Usage:  "run database migrations",
+			Action: migrateMain,
+		},
 	}
 
 	return app.Run(args)
@@ -73,4 +78,19 @@ func serveMain(c *cli.Context) error {
 	})
 	
 	return http.ListenAndServe(addr, nil)
+}
+
+func migrateMain(c *cli.Context) error {
+	db, err := database.New()
+	if err != nil {
+		return err
+	}
+	
+	log.Info("Running migrations...")
+	if err := db.Migrate(); err != nil {
+		return err
+	}
+	
+	log.Info("Migrations completed successfully")
+	return nil
 }
