@@ -33,7 +33,7 @@ func run(args []string) error {
 		&cli.Command{
 			Name:   "serve",
 			Usage:  "run the server",
-			Action: serve,
+			Action: serveMain,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:  "appview-host",
@@ -48,7 +48,7 @@ func run(args []string) error {
 	return app.Run(args)
 }
 
-func serve(c *cli.Context) error {
+func serveMain(c *cli.Context) error {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3000"
