@@ -8,7 +8,13 @@ ENV GOEXPERIMENT="loopvar"
 # Copy bskyweb directory first
 COPY bskyweb/ ./bskyweb/
 
-# Download and verify dependencies (không init vì đã có go.mod)
+# Create static directories and empty files
+RUN mkdir -p bskyweb/static/{js,css,media} && \
+    touch bskyweb/static/js/empty.txt && \
+    touch bskyweb/static/css/empty.txt && \
+    touch bskyweb/static/media/empty.txt
+
+# Download and verify dependencies
 RUN cd bskyweb/ && \
     go mod download && \
     go mod verify
