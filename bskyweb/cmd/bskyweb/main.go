@@ -63,5 +63,8 @@ func serveMain(c *cli.Context) error {
 	addr := fmt.Sprintf("%s:%s", host, port)
 	log.Infof("Starting server on %s", addr)
 	
-	return http.ListenAndServe(addr, http.FileServer(http.Dir("static")))
+	fs := http.FileServer(http.Dir("/usr/bin/static"))
+	http.Handle("/", fs)
+	
+	return http.ListenAndServe(addr, nil)
 }
