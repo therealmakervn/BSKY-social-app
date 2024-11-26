@@ -6,30 +6,24 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV NODE_VERSION=20
 ENV NVM_DIR=/usr/share/nvm
 
-# Cài đặt Node và yarn
+# Copy package files để cache
+COPY package.json yarn.lock ./
+COPY bskyweb/go.mod bskyweb/go.sum ./bskyweb/
+
+# Cài đặt dependencies 
 RUN mkdir -p $NVM_DIR && \
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-
-# Copy source code
-COPY . .
-
-# Build web assets using bash
-SHELL ["/bin/bash", "-c"]
-RUN . $NVM_DIR/nvm.sh && \
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && \
+    . $NVM_DIR/nvm.sh && \
     nvm install $NODE_VERSION && \
-    nvm use $NODE_VERSION && \
     npm install -g yarn && \
-    yarn && \
-    yarn build-web
+    yarn install --frozen-lockfile && \
+    cd bskyweb/ && go mod download
 
-# Build Go binary
-RUN cd bskyweb/ && \
-    go mod download && \
-    go mod verify && \
-    CGO_ENABLED=1 \
-    GOOS=linux \
-    GOARCH=amd64 \
-    go build -v -trimpath -tags timetzdata -o /bskyweb ./cmd/bskyweb
+# Copy source và build
+COPY . .
+RUN yarn build-web && \
+    cd bskyweb/ && \
+    CGO_ENABLED=1 GOOS=linux go build -o /bskyweb ./cmd/bskyweb
 
 FROM debian:bullseye-slim
 
