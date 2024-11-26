@@ -14,7 +14,7 @@
     log {
         format json
     }
-    root * /usr/bin/static
+    root * /srv/static
     encode gzip
     file_server
     try_files {path} /index.html
