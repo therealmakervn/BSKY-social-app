@@ -13,17 +13,11 @@ RUN mkdir -p $NVM_DIR && \
     nvm install $NODE_VERSION && \
     npm install -g yarn
 
-# Copy source code
+# Copy source và build
 COPY . .
-
-# Build web assets
-SHELL ["/bin/bash", "-c"]
 RUN source $NVM_DIR/nvm.sh && \
     yarn && \
     yarn build-web
-
-# Đảm bảo index.html được tạo
-RUN test -f bskyweb/static/index.html
 
 # Build Go binary
 RUN cd bskyweb/ && \
@@ -34,18 +28,14 @@ RUN cd bskyweb/ && \
     GOARCH=amd64 \
     go build -v -trimpath -tags timetzdata -o /bskyweb ./cmd/bskyweb
 
-FROM debian:bullseye-slim
-
-ENV PORT=3000
-ENV GODEBUG=netdns=go
-
-RUN apt-get update && apt-get install --yes \
-    dumb-init \
-    ca-certificates
+FROM caddy:2.7-alpine
 
 WORKDIR /usr/bin
 COPY --from=build-env /bskyweb ./bskyweb
 COPY --from=build-env /usr/src/social-app/bskyweb/static ./static
+COPY Caddyfile /etc/caddy/Caddyfile
 
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["./bskyweb", "serve"]
+ENV PORT=3000
+EXPOSE 3000
+
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
