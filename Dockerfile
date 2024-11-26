@@ -8,13 +8,7 @@ ENV GOEXPERIMENT="loopvar"
 # Copy bskyweb directory first
 COPY bskyweb/ ./bskyweb/
 
-# Create static directories and empty files
-RUN mkdir -p bskyweb/static/{js,css,media} && \
-    touch bskyweb/static/js/empty.txt && \
-    touch bskyweb/static/css/empty.txt && \
-    touch bskyweb/static/media/empty.txt
-
-# Download and verify dependencies
+# Initialize Go modules
 RUN cd bskyweb/ && \
     go mod download && \
     go mod verify
@@ -31,6 +25,9 @@ FROM debian:bullseye-slim
 
 ENV PORT=3000
 ENV GODEBUG=netdns=go
+ENV TZ=Etc/UTC
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PORT=3000
 
 RUN apt-get update && apt-get install --yes \
     dumb-init \
