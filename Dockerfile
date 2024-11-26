@@ -1,29 +1,26 @@
-FROM node:20-bullseye AS node-builder
+FROM golang:1.22-bullseye AS build-env
 
-WORKDIR /app
+WORKDIR /usr/src/social-app
 
-# Copy package files first for better caching
-COPY package.json ./
-COPY yarn.lock ./
-COPY .yarnrc.yml ./
-COPY .yarn ./.yarn
+ENV DEBIAN_FRONTEND=noninteractive
+ENV NODE_VERSION=20
+ENV NVM_DIR=/usr/share/nvm
 
-# Install dependencies with specific resolutions
-RUN yarn set version stable && \
-    yarn config set nodeLinker node-modules && \
-    yarn install --frozen-lockfile --network-timeout 300000
+# Cài đặt Node và yarn
+RUN mkdir -p $NVM_DIR && \
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && \
+    . $NVM_DIR/nvm.sh && \
+    nvm install $NODE_VERSION && \
+    npm install -g yarn
 
-# Copy rest of the source
+# Copy source code
 COPY . .
 
 # Build web assets
-RUN yarn build-web
-
-FROM golang:1.22-bullseye AS go-builder
-
-WORKDIR /app
-COPY . .
-COPY --from=node-builder /app/bskyweb/static ./bskyweb/static
+SHELL ["/bin/bash", "-c"]
+RUN source $NVM_DIR/nvm.sh && \
+    yarn && \
+    yarn build-web
 
 # Build Go binary
 RUN cd bskyweb/ && \
@@ -34,36 +31,18 @@ RUN cd bskyweb/ && \
     GOARCH=amd64 \
     go build -v -trimpath -tags timetzdata -o /bskyweb ./cmd/bskyweb
 
-FROM caddy:2.7-alpine
-
-WORKDIR /srv
-COPY --from=go-builder /bskyweb /usr/bin/bskyweb
-COPY --from=node-builder /app/bskyweb/static ./static
-
-# Add Caddyfile
-RUN printf "{\n\
-    admin off\n\
-    persist_config off\n\
-    auto_https off\n\
-    log {\n\
-        format json\n\
-    }\n\
-    servers {\n\
-        trusted_proxies static private_ranges 100.0.0.0/8\n\
-    }\n\
-}\n\
-\n\
-:{$PORT:3000} {\n\
-    log {\n\
-        format json\n\
-    }\n\
-    root * /srv/static\n\
-    encode gzip\n\
-    file_server\n\
-    try_files {path} /index.html\n\
-}" > /etc/caddy/Caddyfile
+FROM debian:bullseye-slim
 
 ENV PORT=3000
-EXPOSE 3000
+ENV GODEBUG=netdns=go
 
-CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+RUN apt-get update && apt-get install --yes \
+    dumb-init \
+    ca-certificates
+
+WORKDIR /usr/bin
+COPY --from=build-env /bskyweb ./bskyweb
+COPY --from=build-env /usr/src/social-app/bskyweb/static ./static
+
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["./bskyweb", "serve"]

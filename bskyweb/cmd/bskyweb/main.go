@@ -65,14 +65,10 @@ func serveMain(c *cli.Context) error {
 	
 	fs := http.FileServer(http.Dir("/usr/bin/static"))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		_, err := os.Stat("/usr/bin/static" + path)
-		
-		if os.IsNotExist(err) {
+		if _, err := os.Stat("/usr/bin/static" + r.URL.Path); os.IsNotExist(err) {
 			http.ServeFile(w, r, "/usr/bin/static/index.html")
 			return
 		}
-		
 		fs.ServeHTTP(w, r)
 	})
 	
