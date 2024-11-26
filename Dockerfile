@@ -3,22 +3,36 @@ FROM golang:1.22-bullseye AS build-env
 WORKDIR /usr/src/social-app
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV GOEXPERIMENT="loopvar"
+ENV NODE_VERSION=20
+ENV NVM_DIR=/usr/share/nvm
 
-# Copy bskyweb directory first
-COPY bskyweb/ ./bskyweb/
+# Cài đặt các dependencies cần thiết
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-# Create static directories and files
+# Cài đặt Node và yarn
+RUN mkdir -p $NVM_DIR && \
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && \
+    . $NVM_DIR/nvm.sh && \
+    nvm install $NODE_VERSION && \
+    npm install -g yarn
+
+# Copy source code
 COPY . .
-RUN yarn && yarn build-web
 
-# Download and verify dependencies
+# Build web assets
+SHELL ["/bin/bash", "-c"]
+RUN source $NVM_DIR/nvm.sh && \
+    yarn && \
+    yarn build-web
+
+# Build Go binary
 RUN cd bskyweb/ && \
     go mod download && \
-    go mod verify
-
-# Build the binary
-RUN cd bskyweb/ && \
+    go mod verify && \
     CGO_ENABLED=1 \
     GOOS=linux \
     GOARCH=amd64 \
@@ -29,9 +43,6 @@ FROM debian:bullseye-slim
 
 ENV PORT=3000
 ENV GODEBUG=netdns=go
-ENV TZ=Etc/UTC
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PORT=3000
 
 RUN apt-get update && apt-get install --yes \
     dumb-init \
