@@ -1,23 +1,17 @@
-FROM golang:1.22-bullseye AS build-env
+FROM node:20-bullseye AS node-builder
 
 WORKDIR /usr/src/social-app
-
-ENV DEBIAN_FRONTEND=noninteractive
-ENV NODE_VERSION=20
-ENV NVM_DIR=/usr/share/nvm
-
-# Cài đặt Node và yarn
-RUN mkdir -p $NVM_DIR && \
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && \
-    . $NVM_DIR/nvm.sh && \
-    nvm install $NODE_VERSION && \
-    npm install -g yarn
-
-# Copy source và build
 COPY . .
-RUN source $NVM_DIR/nvm.sh && \
-    yarn && \
+
+# Build web assets
+RUN yarn && \
     yarn build-web
+
+FROM golang:1.22-bullseye AS go-builder
+
+WORKDIR /usr/src/social-app
+COPY . .
+COPY --from=node-builder /usr/src/social-app/bskyweb/static ./bskyweb/static
 
 # Build Go binary
 RUN cd bskyweb/ && \
@@ -28,14 +22,18 @@ RUN cd bskyweb/ && \
     GOARCH=amd64 \
     go build -v -trimpath -tags timetzdata -o /bskyweb ./cmd/bskyweb
 
-FROM caddy:2.7-alpine
-
-WORKDIR /usr/bin
-COPY --from=build-env /bskyweb ./bskyweb
-COPY --from=build-env /usr/src/social-app/bskyweb/static ./static
-COPY Caddyfile /etc/caddy/Caddyfile
+FROM debian:bullseye-slim
 
 ENV PORT=3000
-EXPOSE 3000
+ENV GODEBUG=netdns=go
 
-CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+RUN apt-get update && apt-get install --yes \
+    dumb-init \
+    ca-certificates
+
+WORKDIR /usr/bin
+COPY --from=go-builder /bskyweb ./bskyweb
+COPY --from=node-builder /usr/src/social-app/bskyweb/static ./static
+
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["./bskyweb", "serve"]
