@@ -22,6 +22,9 @@ RUN source $NVM_DIR/nvm.sh && \
     yarn && \
     yarn build-web
 
+# Đảm bảo index.html được tạo
+RUN test -f bskyweb/static/index.html
+
 # Build Go binary
 RUN cd bskyweb/ && \
     go mod download && \
