@@ -1,13 +1,19 @@
 FROM node:20-bullseye AS node-builder
 
 WORKDIR /app
-COPY package*.json ./
+
+# Copy package files first for better caching
+COPY package.json ./
 COPY yarn.lock ./
+COPY .yarnrc.yml ./
+COPY .yarn ./.yarn
 
-# Install dependencies
-RUN yarn install --frozen-lockfile
+# Install dependencies with specific resolutions
+RUN yarn set version stable && \
+    yarn config set nodeLinker node-modules && \
+    yarn install --frozen-lockfile --network-timeout 300000
 
-# Copy source
+# Copy rest of the source
 COPY . .
 
 # Build web assets
@@ -35,8 +41,27 @@ COPY --from=go-builder /bskyweb /usr/bin/bskyweb
 COPY --from=node-builder /app/bskyweb/static ./static
 
 # Add Caddyfile
-COPY Caddyfile /etc/caddy/Caddyfile
-RUN caddy fmt --overwrite /etc/caddy/Caddyfile
+RUN printf "{\n\
+    admin off\n\
+    persist_config off\n\
+    auto_https off\n\
+    log {\n\
+        format json\n\
+    }\n\
+    servers {\n\
+        trusted_proxies static private_ranges 100.0.0.0/8\n\
+    }\n\
+}\n\
+\n\
+:{$PORT:3000} {\n\
+    log {\n\
+        format json\n\
+    }\n\
+    root * /srv/static\n\
+    encode gzip\n\
+    file_server\n\
+    try_files {path} /index.html\n\
+}" > /etc/caddy/Caddyfile
 
 ENV PORT=3000
 EXPOSE 3000
