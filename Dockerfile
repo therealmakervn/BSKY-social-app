@@ -8,17 +8,17 @@ ENV NVM_DIR=/usr/share/nvm
 
 # Cài đặt Node và yarn
 RUN mkdir -p $NVM_DIR && \
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && \
-    . $NVM_DIR/nvm.sh && \
-    nvm install $NODE_VERSION && \
-    npm install -g yarn
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 
 # Copy source code
 COPY . .
 
-# Build web assets
+# Build web assets using bash
 SHELL ["/bin/bash", "-c"]
-RUN source $NVM_DIR/nvm.sh && \
+RUN . $NVM_DIR/nvm.sh && \
+    nvm install $NODE_VERSION && \
+    nvm use $NODE_VERSION && \
+    npm install -g yarn && \
     yarn && \
     yarn build-web
 
